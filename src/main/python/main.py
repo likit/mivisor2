@@ -1,6 +1,6 @@
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 import PyQt5.QtWidgets as qtw
-from new_project_form import NewProjectForm
+from project_dialogs import NewProjectDialog
 
 import sys
 
@@ -20,6 +20,9 @@ class MainWindow(qtw.QMainWindow):
         open_icon = self.style().standardIcon(qtw.QStyle.SP_DirOpenIcon)
         open_action.setIcon(open_icon)
 
+        new_proj_icon = self.style().standardIcon(qtw.QStyle.SP_FileIcon)
+        new_proj_action.setIcon(new_proj_icon)
+
     def showAboutDialog(self):
         qtw.QMessageBox.about(
             self,
@@ -28,7 +31,7 @@ class MainWindow(qtw.QMainWindow):
         )
 
     def showNewProjectForm(self):
-        form = NewProjectForm(self)
+        form = NewProjectDialog(self)
         form.setModal(True)
         form.show()
 
@@ -36,7 +39,7 @@ class MainWindow(qtw.QMainWindow):
 if __name__ == '__main__':
     appctxt = ApplicationContext()       # 1. Instantiate ApplicationContext
     window = MainWindow()
-    window.showMaximized()
+    window.resize(800, 600)
     window.show()
     exit_code = appctxt.app.exec_()      # 2. Invoke appctxt.app.exec_()
     sys.exit(exit_code)

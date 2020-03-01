@@ -4,9 +4,9 @@ import PyQt5.QtGui as qtg
 import os
 
 
-class NewProjectForm(qtw.QDialog):
+class NewProjectDialog(qtw.QDialog):
     def __init__(self, parent):
-        super(NewProjectForm, self).__init__(parent)
+        super(NewProjectDialog, self).__init__(parent)
 
         self.setWindowTitle('Create New Project')
 
@@ -16,12 +16,9 @@ class NewProjectForm(qtw.QDialog):
         self.project_name_line_edit = qtw.QLineEdit('MyProject')
         self.project_name_line_edit.textChanged.connect(self.updateDirName)
         self.project_dir_line_edit = qtw.QLineEdit()
-        self.project_db_line_edit = qtw.QLineEdit()
-        self.browse_btn = qtw.QPushButton()
-        self.browse_db_btn = qtw.QPushButton()
+        self.browse_btn = qtw.QPushButton(clicked=self.openProjDir)
         self.browse_btn.setIcon(self.style().standardIcon(qtw.QStyle.SP_DialogOpenButton))
-        self.browse_db_btn.setIcon(self.style().standardIcon(qtw.QStyle.SP_DialogOpenButton))
-        self.create_btn = qtw.QPushButton('Create')
+        self.create_btn = qtw.QPushButton('Create', clicked=self.create)
         self.cancel_btn = qtw.QPushButton('Cancel', clicked=self.destroy)
 
         grid_layout.addWidget(qtw.QLabel('Project Name'), 0, 0)
@@ -30,10 +27,6 @@ class NewProjectForm(qtw.QDialog):
         grid_layout.addWidget(qtw.QLabel('Project Directory'), 1, 0)
         grid_layout.addWidget(self.project_dir_line_edit, 1, 1)
         grid_layout.addWidget(self.browse_btn, 1, 2)
-
-        grid_layout.addWidget(qtw.QLabel('Project Database'), 2, 0)
-        grid_layout.addWidget(self.project_db_line_edit, 2, 1)
-        grid_layout.addWidget(self.browse_db_btn, 2, 2)
 
         button_layout = qtw.QHBoxLayout()
         button_layout.setAlignment(qtc.Qt.AlignCenter)
@@ -46,12 +39,63 @@ class NewProjectForm(qtw.QDialog):
         main_layout.addLayout(grid_layout)
         main_layout.addLayout(button_layout)
 
-        self.updateDirName()  # initiate the directory
         self.create_btn.setFocus()
-        self.resize(600, 200)
+
+        # Initialize widgets
+        self.current_proj_dir = qtc.QDir.homePath()
+        self.updateDirName()
+
+        self.resize(600, 100)
 
     def updateDirName(self):
-        projdir = os.path.join(os.getcwd(), self.project_name_line_edit.text())
-        dbdir = os.path.join(projdir, 'main.db')
+        projdir = os.path.join(self.current_proj_dir,
+                               self.project_name_line_edit.text())
         self.project_dir_line_edit.setText(projdir)
-        self.project_db_line_edit.setText(dbdir)
+
+    def openProjDir(self):
+        projdir = qtw.QFileDialog.getExistingDirectory(
+            self,
+            "Select a directory for the project...",
+            self.current_proj_dir,
+        )
+        self.current_proj_dir = projdir
+        self.updateDirName()
+
+    def create(self):
+        if not os.path.exists(self.project_dir_line_edit.text()):
+            response = qtw.QMessageBox.warning(
+                self,
+                'Warning',
+                'The directory does not exist. Do you want to create it?',
+                qtw.QMessageBox.Yes|qtw.QMessageBox.Abort
+            )
+            if response == qtw.QMessageBox.Yes:
+                try:
+                    os.mkdir(self.project_dir_line_edit.text())
+                except:
+                    qtw.QMessageBox.critical(
+                        self,
+                        'Error Occurred',
+                        'Could not create a directory.'
+                    )
+                else:
+                    qtw.QMessageBox.information(
+                        self,
+                        'Project has been created',
+                        'New project has been created.'
+                    )
+                self.close()
+        else:
+            response = qtw.QMessageBox.warning(
+                self,
+                'Warning',
+                'The directory already exists. Some files will be overwritten.',
+                qtw.QMessageBox.Yes|qtw.QMessageBox.Abort
+            )
+            if response == qtw.QMessageBox.Yes:
+                qtw.QMessageBox.information(
+                    self,
+                    'Project has been created',
+                    'New project has been created.'
+                )
+                self.close()
