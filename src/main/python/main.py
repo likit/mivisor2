@@ -102,10 +102,10 @@ class MainWindow(qtw.QMainWindow):
             current_proj_dir,
             os.path.basename(current_proj_dir)+'.yml'
         )
-        config = yaml.load(open(config_filepath, 'r'))
+        config = yaml.load(open(config_filepath, 'r'), Loader=yaml.Loader)
         self.close()
         main_project_window = pjd.MainWindow(self)
-        main_project_window.show()
+        main_project_window.showMaximized()
         main_project_window.close_signal.connect(self.show)
 
 
