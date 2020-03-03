@@ -7,6 +7,8 @@ import yaml
 
 
 class NewProjectDialog(qtw.QDialog):
+    create_project_signal = qtc.pyqtSignal(str)
+
     def __init__(self, parent):
         super(NewProjectDialog, self).__init__(parent)
 
@@ -106,4 +108,17 @@ class NewProjectDialog(qtw.QDialog):
             )
             if response == qtw.QMessageBox.Yes:
                 self.initiate_proj_dir()
+        self.create_project_signal.emit(self.project_dir_line_edit.text())
         self.close()
+
+
+class MainWindow(qtw.QDialog):
+    close_signal = qtc.pyqtSignal()
+    def __init__(self, parent):
+        super(MainWindow, self).__init__(parent)
+        layout = qtw.QVBoxLayout()
+        layout.addWidget(qtw.QLabel('<h1>Your project</h1>'))
+        self.setLayout(layout)
+
+    def closeEvent(self, event):
+        self.close_signal.emit()

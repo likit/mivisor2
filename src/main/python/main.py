@@ -1,12 +1,17 @@
+import os
+
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
-from project_dialogs import NewProjectDialog
+import project_dialogs as pjd
 
 import sys
+import yaml
 
+current_proj_dir = None
 
 class MainWindow(qtw.QMainWindow):
+    global current_proj_dir
     def __init__(self):
         super(MainWindow, self).__init__()
 
@@ -33,7 +38,7 @@ class MainWindow(qtw.QMainWindow):
             'QLabel {color: blue}'
         )
         new_proj_btn = qtw.QPushButton('Create a project', clicked=self.showNewProjectDialog)
-        open_proj_btn = qtw.QPushButton('Open a project')
+        open_proj_btn = qtw.QPushButton('Open a project', clicked=self.openProject)
         about_btn = qtw.QPushButton('About', clicked=self.showAboutDialog)
         exit_btn = qtw.QPushButton('Exit', clicked=self.exitProgram)
         new_proj_btn.setStyleSheet(
@@ -69,8 +74,9 @@ class MainWindow(qtw.QMainWindow):
         )
 
     def showNewProjectDialog(self):
-        form = NewProjectDialog(self)
+        form = pjd.NewProjectDialog(self)
         form.setModal(True)
+        form.create_project_signal.connect(self.openProject)
         form.show()
 
     def exitProgram(self):
@@ -82,6 +88,25 @@ class MainWindow(qtw.QMainWindow):
         )
         if response == qtw.QMessageBox.Yes:
             self.close()
+
+    def openProject(self, project_dir):
+        if not project_dir:
+            project_dir = qtw.QFileDialog.getExistingDirectory(
+                self,
+                "Select the project directory...",
+                qtc.QDir.homePath(),
+            )
+
+        current_proj_dir = project_dir
+        config_filepath = os.path.join(
+            current_proj_dir,
+            os.path.basename(current_proj_dir)+'.yml'
+        )
+        config = yaml.load(open(config_filepath, 'r'))
+        self.close()
+        main_project_window = pjd.MainWindow(self)
+        main_project_window.show()
+        main_project_window.close_signal.connect(self.show)
 
 
 if __name__ == '__main__':
