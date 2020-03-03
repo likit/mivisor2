@@ -112,13 +112,81 @@ class NewProjectDialog(qtw.QDialog):
         self.close()
 
 
-class MainWindow(qtw.QDialog):
+class MainWindow(qtw.QMainWindow):
     close_signal = qtc.pyqtSignal()
     def __init__(self, parent):
         super(MainWindow, self).__init__(parent)
-        layout = qtw.QVBoxLayout()
-        layout.addWidget(qtw.QLabel('<h1>Your project</h1>'))
-        self.setLayout(layout)
+        main_container = qtw.QWidget()
+        vlayout = qtw.QVBoxLayout()
+        info_group = qtw.QGroupBox('Information')
+        info_group.setLayout(qtw.QVBoxLayout())
+        info_group.layout().addWidget(qtw.QLabel('Database File:'))
+        info_group.layout().addWidget(qtw.QLabel('Data File:'))
+        info_group.setSizePolicy(qtw.QSizePolicy.Preferred,
+                                 qtw.QSizePolicy.Fixed)
+
+        field_group = qtw.QGroupBox('Column Properties')
+        field_group.setLayout(qtw.QHBoxLayout())
+
+        field_edit_layout = qtw.QVBoxLayout()
+        field_edit_layout.addWidget(qtw.QListWidget())
+        field_alias_layout = qtw.QHBoxLayout()
+        field_alias_edit = qtw.QLineEdit()
+        field_alias_edit.setSizePolicy(qtw.QSizePolicy.Preferred,
+                                       qtw.QSizePolicy.Fixed)
+        field_alias_label = qtw.QLabel('Alias:')
+        field_alias_label.setSizePolicy(
+            qtw.QSizePolicy.Fixed,
+            qtw.QSizePolicy.Fixed
+        )
+        field_alias_layout.addWidget(field_alias_label)
+        field_alias_layout.addWidget(field_alias_edit)
+        field_edit_layout.addLayout(field_alias_layout)
+
+        field_type_layout = qtw.QHBoxLayout()
+        field_type_layout.setAlignment(qtc.Qt.AlignLeft)
+        chk_excluded = qtw.QCheckBox('Excluded')
+        chk_key = qtw.QCheckBox('Key')
+        chk_drug = qtw.QCheckBox('Drug')
+        chk_date = qtw.QCheckBox('Date')
+        field_type_layout.addWidget(chk_excluded)
+        field_type_layout.addWidget(chk_key)
+        field_type_layout.addWidget(chk_drug)
+        field_type_layout.addWidget(chk_date)
+        field_edit_layout.addLayout(field_type_layout)
+        field_group.layout().addLayout(field_edit_layout)
+        field_group.layout().addWidget(qtw.QTextEdit())
+        field_group.setSizePolicy(qtw.QSizePolicy.Preferred,
+                                  qtw.QSizePolicy.Fixed)
+        data_table = qtw.QTableView()
+        data_table.setSizePolicy(qtw.QSizePolicy.Expanding,
+                                 qtw.QSizePolicy.Preferred)
+        vlayout.addWidget(info_group)
+        vlayout.addWidget(data_table)
+        vlayout.addWidget(field_group)
+        main_container.setLayout(vlayout)
+        self.setCentralWidget(main_container)
+        toolbar = self.addToolBar('Data')
+        db_connect_action = toolbar.addAction(
+            qtg.QIcon('../icons/database/files/48X48/data_right.png'),
+            'Connect database',
+        )
+        db_disconnect_action = toolbar.addAction(
+            qtg.QIcon('../icons/database/files/48X48/data_delete.png'),
+            'Disconnect database',
+        )
+        data_import_action = toolbar.addAction(
+            # qtg.QIcon('../icons/database/files/48X48/table_add.png'),
+            qtg.QIcon('../icons/Koloria-Icon-Set/File_Add.png'),
+            'Import data',
+        )
+        save_config_action = toolbar.addAction(
+            qtg.QIcon('../icons/Koloria-Icon-Set/File_List.png'),
+            'Save properties',
+        )
+
+        db_connect_action.setEnabled(False)
+        db_disconnect_action.setEnabled(False)
 
     def closeEvent(self, event):
         self.close_signal.emit()
