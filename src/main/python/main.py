@@ -3,6 +3,7 @@ import os
 from fbs_runtime.application_context.PyQt5 import ApplicationContext
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
+import PyQt5.QtGui as qtg
 import project_dialogs as pjd
 
 import sys
@@ -23,10 +24,10 @@ class MainWindow(qtw.QMainWindow):
         open_action = file_menu.addAction('Open')
         help_action = help_menu.addAction('About', self.showAboutDialog)
 
-        open_icon = self.style().standardIcon(qtw.QStyle.SP_DirOpenIcon)
+        open_icon = qtg.QIcon('../icons/Koloria-Icon-Set/Folder.png')
         open_action.setIcon(open_icon)
 
-        new_proj_icon = self.style().standardIcon(qtw.QStyle.SP_FileIcon)
+        new_proj_icon = qtg.QIcon('../icons/Koloria-Icon-Set/Folder_Add.png')
         new_proj_action.setIcon(new_proj_icon)
 
         container = qtw.QWidget(self)
@@ -37,10 +38,22 @@ class MainWindow(qtw.QMainWindow):
         title_lbl.setStyleSheet(
             'QLabel {color: blue}'
         )
-        new_proj_btn = qtw.QPushButton('Create a project', clicked=self.showNewProjectDialog)
-        open_proj_btn = qtw.QPushButton('Open a project', clicked=self.openProject)
-        about_btn = qtw.QPushButton('About', clicked=self.showAboutDialog)
-        exit_btn = qtw.QPushButton('Exit', clicked=self.exitProgram)
+        new_proj_btn = qtw.QPushButton(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Folder_Add.png'),
+            'Create a project', clicked=self.showNewProjectDialog
+        )
+        open_proj_btn = qtw.QPushButton(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Folder.png'),
+            'Open a project', clicked=self.openProject
+        )
+        about_btn = qtw.QPushButton(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Info_Light.png'),
+            'About', clicked=self.showAboutDialog
+        )
+        exit_btn = qtw.QPushButton(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Denided.png'),
+            'Exit', clicked=self.exitProgram
+        )
         new_proj_btn.setStyleSheet(
             'QPushButton {background-color: #fffefa; border: 2px solid white; font-size: 18px}'
         )
