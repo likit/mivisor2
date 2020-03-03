@@ -1,7 +1,9 @@
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
+from config_template import config
 import os
+import yaml
 
 
 class NewProjectDialog(qtw.QDialog):
@@ -61,30 +63,40 @@ class NewProjectDialog(qtw.QDialog):
         self.current_proj_dir = projdir
         self.updateDirName()
 
+    def initiate_proj_dir(self, exist=False):
+        try:
+            if exist:
+                os.mkdir(self.project_dir_line_edit.text())
+
+            config_filepath = os.path.join(self.project_dir_line_edit.text(),
+                                           self.project_name_line_edit.text() + '.yml')
+            config_file = open(config_filepath, 'w')
+            yaml.dump(config, stream=config_file, Dumper=yaml.Dumper)
+            config_file.close()
+        except:
+            qtw.QMessageBox.critical(
+                self,
+                'Error Occurred',
+                'Could not create a directory or files.'
+            )
+            raise
+        else:
+            qtw.QMessageBox.information(
+                self,
+                'Project Created',
+                'A project has been created.'
+            )
+
     def create(self):
         if not os.path.exists(self.project_dir_line_edit.text()):
             response = qtw.QMessageBox.warning(
                 self,
                 'Warning',
                 'The directory does not exist. Do you want to create it?',
-                qtw.QMessageBox.Yes|qtw.QMessageBox.Abort
+                qtw.QMessageBox.Yes | qtw.QMessageBox.Abort
             )
             if response == qtw.QMessageBox.Yes:
-                try:
-                    os.mkdir(self.project_dir_line_edit.text())
-                except:
-                    qtw.QMessageBox.critical(
-                        self,
-                        'Error Occurred',
-                        'Could not create a directory.'
-                    )
-                else:
-                    qtw.QMessageBox.information(
-                        self,
-                        'Project has been created',
-                        'New project has been created.'
-                    )
-                self.close()
+                self.initiate_proj_dir(exist=True)
         else:
             response = qtw.QMessageBox.warning(
                 self,
@@ -93,9 +105,5 @@ class NewProjectDialog(qtw.QDialog):
                 qtw.QMessageBox.Yes|qtw.QMessageBox.Abort
             )
             if response == qtw.QMessageBox.Yes:
-                qtw.QMessageBox.information(
-                    self,
-                    'Project has been created',
-                    'New project has been created.'
-                )
-                self.close()
+                self.initiate_proj_dir()
+        self.close()
