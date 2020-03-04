@@ -9,10 +9,9 @@ import project_dialogs as pjd
 import sys
 import yaml
 
-current_proj_dir = None
 
 class MainWindow(qtw.QMainWindow):
-    global current_proj_dir
+    settings = qtc.QSettings('MUMT', 'Mivisor2')
     def __init__(self):
         super(MainWindow, self).__init__()
 
@@ -46,6 +45,13 @@ class MainWindow(qtw.QMainWindow):
             qtg.QIcon('../icons/Koloria-Icon-Set/Folder.png'),
             'Open a project', clicked=self.openProject
         )
+        open_rcnt_proj_btn = qtw.QPushButton(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Folder_Upload.png'),
+            'Open the recent project',
+            clicked=lambda: self.openProject(
+                self.settings.value('current_proj_dir', '', str)
+            )
+        )
         about_btn = qtw.QPushButton(
             qtg.QIcon('../icons/Koloria-Icon-Set/Info_Light.png'),
             'About', clicked=self.showAboutDialog
@@ -58,6 +64,9 @@ class MainWindow(qtw.QMainWindow):
             'QPushButton {background-color: #fffefa; border: 2px solid white; font-size: 18px}'
         )
         open_proj_btn.setStyleSheet(
+            'QPushButton {background-color: #fffefa; border: 2px solid white; font-size: 18px}'
+        )
+        open_rcnt_proj_btn.setStyleSheet(
             'QPushButton {background-color: #fffefa; border: 2px solid white; font-size: 18px}'
         )
         about_btn.setStyleSheet(
@@ -75,6 +84,7 @@ class MainWindow(qtw.QMainWindow):
         main_layout.addWidget(version_lbl)
         main_layout.addWidget(new_proj_btn)
         main_layout.addWidget(open_proj_btn)
+        main_layout.addWidget(open_rcnt_proj_btn)
         main_layout.addWidget(about_btn)
         main_layout.addWidget(exit_btn)
         self.setCentralWidget(container)
@@ -110,12 +120,11 @@ class MainWindow(qtw.QMainWindow):
                 qtc.QDir.homePath(),
             )
 
-        current_proj_dir = project_dir
-        config_filepath = os.path.join(
-            current_proj_dir,
-            os.path.basename(current_proj_dir)+'.yml'
-        )
-        config = yaml.load(open(config_filepath, 'r'), Loader=yaml.Loader)
+        #TODO: insert the current project to the recent project list
+        self.settings.setValue('current_proj_dir', project_dir)
+
+        config_filepath = os.path.join(project_dir, 'config.yml')
+        config_data = yaml.load(open(config_filepath, 'r'), Loader=yaml.Loader)
         self.close()
         main_project_window = pjd.MainWindow(self)
         main_project_window.showMaximized()

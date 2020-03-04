@@ -70,8 +70,7 @@ class NewProjectDialog(qtw.QDialog):
             if exist:
                 os.mkdir(self.project_dir_line_edit.text())
 
-            config_filepath = os.path.join(self.project_dir_line_edit.text(),
-                                           self.project_name_line_edit.text() + '.yml')
+            config_filepath = os.path.join(self.project_dir_line_edit.text(), 'config.yml')
             config_file = open(config_filepath, 'w')
             yaml.dump(config, stream=config_file, Dumper=yaml.Dumper)
             config_file.close()
@@ -114,16 +113,30 @@ class NewProjectDialog(qtw.QDialog):
 
 class MainWindow(qtw.QMainWindow):
     close_signal = qtc.pyqtSignal()
+    settings = qtc.QSettings('MUMT', 'Mivisor2')
+
     def __init__(self, parent):
         super(MainWindow, self).__init__(parent)
+        self.config_data = None
+
         main_container = qtw.QWidget()
         vlayout = qtw.QVBoxLayout()
         info_group = qtw.QGroupBox('Information')
         info_group.setLayout(qtw.QVBoxLayout())
-        info_group.layout().addWidget(qtw.QLabel('Database File:'))
-        info_group.layout().addWidget(qtw.QLabel('Data File:'))
+        info_group.layout().addWidget(
+            qtw.QLabel(
+                'Project directory: {}'.format(
+                    self.settings.value('current_proj_dir', '', type=str)
+                )
+            )
+        )
+
+        self.creator_label = qtw.QLabel()
+        info_group.layout().addWidget(self.creator_label)
+        info_group.layout().addWidget(qtw.QLabel('Current Database: '))
         info_group.setSizePolicy(qtw.QSizePolicy.Preferred,
                                  qtw.QSizePolicy.Fixed)
+        self.load_config()
 
         field_group = qtw.QGroupBox('Column Properties')
         field_group.setLayout(qtw.QHBoxLayout())
@@ -180,13 +193,88 @@ class MainWindow(qtw.QMainWindow):
             qtg.QIcon('../icons/Koloria-Icon-Set/File_Add.png'),
             'Import data',
         )
+
         save_config_action = toolbar.addAction(
             qtg.QIcon('../icons/Koloria-Icon-Set/File_List.png'),
             'Save properties',
         )
 
+        project_config_action = toolbar.addAction(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Gear.png'),
+            'Project Settings',
+            self.openConfigDialog
+        )
+
+        close_proj_action = toolbar.addAction(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Error.png'),
+            'Close project',
+            self.close
+        )
+
+        help_action = toolbar.addAction(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Help.png'),
+            'Help',
+        )
+
         db_connect_action.setEnabled(False)
         db_disconnect_action.setEnabled(False)
 
+    def load_config(self):
+        config_filepath = os.path.join(self.settings.value('current_proj_dir', '', str), 'config.yml')
+        if config_filepath and os.path.exists(config_filepath):
+            self.config_data = yaml.load(open(config_filepath, 'r'), Loader=yaml.Loader)
+            self.creator_label.setText('Creator: {}'.format(self.config_data.get('creator')))
+        else:
+            qtw.QMessageBox(
+                self,
+                'Config file not found.',
+                'The config file is missing. Cannot proceed.',
+                qtw.QMessageBox.Ok
+            )
+            self.close()
+
+    def openConfigDialog(self):
+        project_setting_dialog = ProjectSettingDialog(self, self.config_data)
+        project_setting_dialog.update_config_signal.connect(self.load_config)
+
     def closeEvent(self, event):
         self.close_signal.emit()
+
+
+class ProjectSettingDialog(qtw.QDialog):
+    settings = qtc.QSettings('MUMT', 'Mivisor2')
+    update_config_signal = qtc.pyqtSignal(bool)
+
+    def __init__(self, parent, config_data):
+        super(ProjectSettingDialog, self).__init__(parent, modal=True)
+        layout = qtw.QVBoxLayout()
+        self.config_data = config_data
+        self.setWindowTitle('Project Settings')
+        self.setLayout(layout)
+
+        self.creator_edit = qtw.QLineEdit(self.config_data.get('creator', 'Unknown'))
+        self.desc_edit = qtw.QTextEdit(self.config_data.get('desc', ''))
+        form_layout = qtw.QFormLayout()
+        form_layout.addRow('Creator', self.creator_edit)
+        form_layout.addRow('Description', self.desc_edit)
+        button_box = qtw.QDialogButtonBox(qtw.QDialogButtonBox.Save|qtw.QDialogButtonBox.Cancel)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        layout.addLayout(form_layout)
+        layout.addWidget(button_box)
+        self.resize(400, 200)
+        self.show()
+
+    def accept(self):
+        config_filepath = os.path.join(self.settings.value('current_proj_dir'), 'config.yml')
+        if self.creator_edit.text():
+            self.config_data['creator'] = self.creator_edit.text()
+        self.config_data['desc'] = self.desc_edit.toPlainText()
+        yaml.dump(self.config_data,
+                  stream=open(config_filepath, 'w'),
+                  Dumper=yaml.Dumper)
+        self.update_config_signal.emit(True)
+        super(ProjectSettingDialog, self).accept()
+
+    def reject(self):
+        super(ProjectSettingDialog, self).reject()
