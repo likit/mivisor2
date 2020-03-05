@@ -127,7 +127,7 @@ class MainWindow(qtw.QMainWindow):
         config_data = yaml.load(open(config_filepath, 'r'), Loader=yaml.Loader)
         self.close()
         main_project_window = pjd.MainWindow(self)
-        main_project_window.showMaximized()
+        main_project_window.show()
         main_project_window.close_signal.connect(self.show)
 
 

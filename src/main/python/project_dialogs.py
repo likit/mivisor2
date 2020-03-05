@@ -9,6 +9,33 @@ import os
 import yaml
 
 
+class NotificationDialog(qtw.QDialog):
+    def __init__(self, parent, title, message):
+        super(NotificationDialog, self).__init__(parent=parent)
+        layout = qtw.QHBoxLayout()
+        layout.setAlignment(qtc.Qt.AlignHCenter)
+        layout.addWidget(qtw.QLabel(message))
+        self.setWindowTitle(title)
+        self.setLayout(layout)
+
+
+class XlrdOpenFileThread(qtc.QThread):
+    xlrd_read_workbook_error = qtc.pyqtSignal(Exception)
+    xlrd_read_workbook_finished = qtc.pyqtSignal(list)
+
+    def __init__(self, filename):
+        super(XlrdOpenFileThread, self).__init__()
+        self.filename = filename
+
+    def run(self):
+        try:
+            worksheets = xlrd.open_workbook(self.filename).sheet_names()
+        except Exception as e:
+            self.xlrd_read_workbook_error.emit(e)
+        else:
+            self.xlrd_read_workbook_finished.emit(worksheets)
+
+
 class NewProjectDialog(qtw.QDialog):
     create_project_signal = qtc.pyqtSignal(str)
 
@@ -257,31 +284,37 @@ class MainWindow(qtw.QMainWindow):
             "Excel files (*.xls *.xlsx)"
         )
         if filename:
-            try:
-                worksheets = xlrd.open_workbook(filename).sheet_names()
-            except IOError:
-                qtw.QMessageBox.critical(
+            self.xlrd_reader = XlrdOpenFileThread(filename)
+            self.xlrd_reader.xlrd_read_workbook_finished.connect(self.showWorksheetListDlg)
+            self.xlrd_reader.xlrd_read_workbook_error.connect(
+                lambda e: qtw.QMessageBox.critical(
                     self,
-                    'File Error.'
-                    'Cannot read data from {}.'.format(filename)
+                    'Error Occurred',
+                    str(e)
                 )
-                return
-            else:
-                worksheet, ok = qtw.QInputDialog.getItem(
-                    self,
-                    'Select a worksheet',
-                    'List of worksheets',
-                    worksheets,
-                    0,
-                    False
-                )
-                if ok and worksheet:
-                    qtw.QMessageBox.information(
-                        self,
-                        'Use worksheet',
-                        'The worksheet is {}'.format(worksheet)
-                    )
-                return
+            )
+            self.xlrd_reader.started.connect(self.openXlrdDlg)
+            self.xlrd_reader.start()
+
+    def openXlrdDlg(self):
+        self.xlrd_dlg = NotificationDialog(self,
+                                           'Information',
+                                           'Reading from the Excel file, please wait..')
+        self.xlrd_dlg.setModal(True)
+        self.xlrd_dlg.show()
+
+    #TODO: use a better method name
+    def showWorksheetListDlg(self, worksheets):
+        self.xlrd_dlg.close()
+        worksheet, ok = qtw.QInputDialog.getItem(
+            self,
+            'Select a worksheet',
+            'Worksheets',
+            worksheets,
+            0,
+            False
+        )
+
 
 
 class ProjectSettingDialog(qtw.QDialog):
