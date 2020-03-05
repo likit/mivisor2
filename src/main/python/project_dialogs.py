@@ -1,6 +1,9 @@
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
+import xlrd
+import pandas as pd
+
 from config_template import config
 import os
 import yaml
@@ -192,6 +195,7 @@ class MainWindow(qtw.QMainWindow):
             # qtg.QIcon('../icons/database/files/48X48/table_add.png'),
             qtg.QIcon('../icons/Koloria-Icon-Set/File_Add.png'),
             'Import data',
+            self.openImportDialog
         )
 
         save_config_action = toolbar.addAction(
@@ -240,6 +244,45 @@ class MainWindow(qtw.QMainWindow):
     def closeEvent(self, event):
         self.close_signal.emit()
 
+    def openImportDialog(self):
+        projdir = self.settings.value('current_proj_dir')
+        print(projdir)
+        if not projdir:
+            projdir = qtc.QDir.homePath()
+
+        filename, type_ = qtw.QFileDialog.getOpenFileName(
+            self,
+            'Import Excel file',
+            projdir,
+            "Excel files (*.xls *.xlsx)"
+        )
+        if filename:
+            try:
+                worksheets = xlrd.open_workbook(filename).sheet_names()
+            except IOError:
+                qtw.QMessageBox.critical(
+                    self,
+                    'File Error.'
+                    'Cannot read data from {}.'.format(filename)
+                )
+                return
+            else:
+                worksheet, ok = qtw.QInputDialog.getItem(
+                    self,
+                    'Select a worksheet',
+                    'List of worksheets',
+                    worksheets,
+                    0,
+                    False
+                )
+                if ok and worksheet:
+                    qtw.QMessageBox.information(
+                        self,
+                        'Use worksheet',
+                        'The worksheet is {}'.format(worksheet)
+                    )
+                return
+
 
 class ProjectSettingDialog(qtw.QDialog):
     settings = qtc.QSettings('MUMT', 'Mivisor2')
@@ -278,3 +321,4 @@ class ProjectSettingDialog(qtw.QDialog):
 
     def reject(self):
         super(ProjectSettingDialog, self).reject()
+
