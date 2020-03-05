@@ -1,0 +1,16 @@
+altgraph==0.17
+fbs==0.8.6
+future==0.18.2
+macholib==1.14
+numpy==1.18.1
+pandas==1.0.1
+pefile==2019.4.18
+PyInstaller==3.4
+PyQt5==5.14.1
+PyQt5-sip==12.7.1
+python-dateutil==2.8.1
+pytz==2019.3
+PyYAML==5.3
+six==1.14.0
+tqdm==4.43.0
+xlrd==1.2.0
