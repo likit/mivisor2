@@ -3,6 +3,7 @@ import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
 import xlrd
 import pandas as pd
+from data_models import PandasModel
 
 from config_template import config
 import os
@@ -10,13 +11,15 @@ import yaml
 
 
 class NotificationDialog(qtw.QDialog):
-    def __init__(self, parent, title, message):
+    def __init__(self, parent, title, message, modal=True):
         super(NotificationDialog, self).__init__(parent=parent)
         layout = qtw.QHBoxLayout()
         layout.setAlignment(qtc.Qt.AlignHCenter)
         layout.addWidget(qtw.QLabel(message))
         self.setWindowTitle(title)
         self.setLayout(layout)
+        self.setModal(modal)
+        self.show()
 
 
 class XlrdOpenFileThread(qtc.QThread):
@@ -34,6 +37,24 @@ class XlrdOpenFileThread(qtc.QThread):
             self.xlrd_read_workbook_error.emit(e)
         else:
             self.xlrd_read_workbook_finished.emit(worksheets)
+
+
+class PandasReadExcelThread(qtc.QThread):
+    pandas_read_excel_finished = qtc.pyqtSignal(pd.DataFrame)
+    pandas_read_excel_error = qtc.pyqtSignal(Exception)
+
+    def __init__(self, filename, sheet):
+        super(PandasReadExcelThread, self).__init__()
+        self.filename = filename
+        self.sheet = sheet
+
+    def run(self):
+        try:
+            df = pd.read_excel(self.filename, self.sheet)
+        except Exception as e:
+            self.pandas_read_excel_error.emit(e)
+        else:
+            self.pandas_read_excel_finished.emit(df)
 
 
 class NewProjectDialog(qtw.QDialog):
@@ -201,11 +222,11 @@ class MainWindow(qtw.QMainWindow):
         field_group.layout().addWidget(qtw.QTextEdit())
         field_group.setSizePolicy(qtw.QSizePolicy.Preferred,
                                   qtw.QSizePolicy.Fixed)
-        data_table = qtw.QTableView()
-        data_table.setSizePolicy(qtw.QSizePolicy.Expanding,
+        self.data_table = qtw.QTableView()
+        self.data_table.setSizePolicy(qtw.QSizePolicy.Expanding,
                                  qtw.QSizePolicy.Preferred)
         vlayout.addWidget(info_group)
-        vlayout.addWidget(data_table)
+        vlayout.addWidget(self.data_table)
         vlayout.addWidget(field_group)
         main_container.setLayout(vlayout)
         self.setCentralWidget(main_container)
@@ -285,7 +306,8 @@ class MainWindow(qtw.QMainWindow):
         )
         if filename:
             self.xlrd_reader = XlrdOpenFileThread(filename)
-            self.xlrd_reader.xlrd_read_workbook_finished.connect(self.showWorksheetListDlg)
+            self.xlrd_reader.xlrd_read_workbook_finished.connect(
+                lambda sheets: self.showWorksheetListDlg(filename, sheets))
             self.xlrd_reader.xlrd_read_workbook_error.connect(
                 lambda e: qtw.QMessageBox.critical(
                     self,
@@ -293,19 +315,15 @@ class MainWindow(qtw.QMainWindow):
                     str(e)
                 )
             )
-            self.xlrd_reader.started.connect(self.openXlrdDlg)
+            self.xlrdDialog = NotificationDialog(self,
+                               'Action in Progress',
+                               'Scanning the Excel file, please wait..')
+            self.xlrd_reader.started.connect(self.xlrdDialog.show)
+            self.xlrd_reader.finished.connect(self.xlrdDialog.close)
             self.xlrd_reader.start()
 
-    def openXlrdDlg(self):
-        self.xlrd_dlg = NotificationDialog(self,
-                                           'Information',
-                                           'Reading from the Excel file, please wait..')
-        self.xlrd_dlg.setModal(True)
-        self.xlrd_dlg.show()
-
     #TODO: use a better method name
-    def showWorksheetListDlg(self, worksheets):
-        self.xlrd_dlg.close()
+    def showWorksheetListDlg(self, filename, worksheets):
         worksheet, ok = qtw.QInputDialog.getItem(
             self,
             'Select a worksheet',
@@ -314,7 +332,21 @@ class MainWindow(qtw.QMainWindow):
             0,
             False
         )
+        if worksheet and ok:
+            self.pandas_excel_reader = PandasReadExcelThread(filename, worksheet)
+            self.pandas_excel_reader.pandas_read_excel_finished.connect(self.read_from_excel_action)
+            pandasExcelDialog = NotificationDialog(self, 'Action in Progress', 'Reading data, please wait..')
+            self.pandas_excel_reader.started.connect(pandasExcelDialog.show)
+            self.pandas_excel_reader.finished.connect(pandasExcelDialog.close)
+            self.pandas_excel_reader.start()
 
+    def read_from_excel_action(self, df):
+        self.dataframe = PandasModel(df, head_row=20)
+        self.data_table.setModel(self.dataframe)
+
+        #TODO: check if the date column is a valid date value
+        #TODO: data table should be able to check/uncheck for inclusion/exclusion from the column list
+        #TODO: user should be able to filter data
 
 
 class ProjectSettingDialog(qtw.QDialog):
