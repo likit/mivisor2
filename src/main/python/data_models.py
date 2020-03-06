@@ -18,6 +18,10 @@ class PandasModel(qtc.QAbstractTableModel):
     def columnCount(self, parent):
         return len(self.data.columns)
 
+    @property
+    def columns(self):
+        return self.data.columns
+
     def data(self, index, role):
         if role == qtc.Qt.DisplayRole:
             return self.data.values[index.row(), index.column()]
