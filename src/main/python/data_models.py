@@ -5,9 +5,12 @@ import pandas as pd
 
 
 class PandasModel(qtc.QAbstractTableModel):
-    def __init__(self, dataframe):
+    def __init__(self, dataframe, head_row=0):
         super(PandasModel, self).__init__()
-        self.data = dataframe
+        if head_row == 0:
+            self.data = dataframe
+        else:
+            self.data = dataframe.head(head_row)
 
     def rowCount(self, parent):
         return len(self.data)
@@ -17,12 +20,12 @@ class PandasModel(qtc.QAbstractTableModel):
 
     def data(self, index, role):
         if role == qtc.Qt.DisplayRole:
-            return self.data.iloc[index.row, index.column]
+            return self.data.values[index.row(), index.column()]
 
     def headerData(self, section, orientation, role=None):
         if(
             orientation == qtc.Qt.Horizontal and role == qtc.Qt.DisplayRole
         ):
-            return self.columns[section]
+            return self.data.columns[section]
         else:
             return super(PandasModel, self).headerData(section, orientation, role)
