@@ -193,31 +193,20 @@ class MainWindow(qtw.QMainWindow):
         field_group.setLayout(qtw.QHBoxLayout())
 
         field_edit_layout = qtw.QVBoxLayout()
-        field_edit_layout.addWidget(qtw.QListWidget())
-        field_alias_layout = qtw.QHBoxLayout()
-        field_alias_edit = qtw.QLineEdit()
-        field_alias_edit.setSizePolicy(qtw.QSizePolicy.Preferred,
-                                       qtw.QSizePolicy.Fixed)
-        field_alias_label = qtw.QLabel('Alias:')
-        field_alias_label.setSizePolicy(
-            qtw.QSizePolicy.Fixed,
-            qtw.QSizePolicy.Fixed
-        )
-        field_alias_layout.addWidget(field_alias_label)
-        field_alias_layout.addWidget(field_alias_edit)
-        field_edit_layout.addLayout(field_alias_layout)
+        self.column_treewidget = qtw.QTreeWidget()
+        self.column_treewidget.setHeaderLabels(['Name', 'Key', 'Date', 'Drug', 'Alias'])
+        self.column_treewidget.setAlternatingRowColors(True)
+        field_edit_layout.addWidget(self.column_treewidget)
+        field_detail_layout = qtw.QFormLayout()
+        field_detail_layout.setFieldGrowthPolicy(qtw.QFormLayout.ExpandingFieldsGrow)
+        self.field_alias_edit = qtw.QLineEdit()
+        self.field_alias_edit.setSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding)
+        self.field_desc_edit = qtw.QLineEdit()
+        self.field_desc_edit.setSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding)
+        field_detail_layout.addRow('Alias', self.field_alias_edit)
+        field_detail_layout.addRow('Description', self.field_desc_edit)
+        field_edit_layout.addLayout(field_detail_layout)
 
-        field_type_layout = qtw.QHBoxLayout()
-        field_type_layout.setAlignment(qtc.Qt.AlignLeft)
-        chk_excluded = qtw.QCheckBox('Excluded')
-        chk_key = qtw.QCheckBox('Key')
-        chk_drug = qtw.QCheckBox('Drug')
-        chk_date = qtw.QCheckBox('Date')
-        field_type_layout.addWidget(chk_excluded)
-        field_type_layout.addWidget(chk_key)
-        field_type_layout.addWidget(chk_drug)
-        field_type_layout.addWidget(chk_date)
-        field_edit_layout.addLayout(field_type_layout)
         field_group.layout().addLayout(field_edit_layout)
         field_group.layout().addWidget(qtw.QTextEdit())
         field_group.setSizePolicy(qtw.QSizePolicy.Preferred,
@@ -343,10 +332,20 @@ class MainWindow(qtw.QMainWindow):
     def read_from_excel_action(self, df):
         self.dataframe = PandasModel(df, head_row=20)
         self.data_table.setModel(self.dataframe)
+        self.column_items = []
+        for n, col in enumerate(self.dataframe.columns):
+            citem = qtw.QTreeWidgetItem(self.column_treewidget)
+            citem.setText(0, col)
+            # citem.setIcon(1, self.style().standardIcon(qtw.QStyle.SP_DialogCancelButton))
+            # citem.setIcon(2, self.style().standardIcon(qtw.QStyle.SP_DialogCancelButton))
+            # citem.setIcon(3, self.style().standardIcon(qtw.QStyle.SP_DialogCancelButton))
+            citem.setCheckState(0, qtc.Qt.Checked)
+            citem.setCheckState(1, qtc.Qt.Unchecked)
+            citem.setCheckState(2, qtc.Qt.Unchecked)
+            citem.setCheckState(3, qtc.Qt.Unchecked)
+            self.column_items.append(citem)
 
         #TODO: check if the date column is a valid date value
-        #TODO: data table should be able to check/uncheck for inclusion/exclusion from the column list
-        #TODO: user should be able to filter data
 
 
 class ProjectSettingDialog(qtw.QDialog):
