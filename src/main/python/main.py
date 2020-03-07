@@ -15,6 +15,7 @@ import pandas as pd
 
 class MainWindow(qtw.QMainWindow):
     settings = qtc.QSettings('MUMT', 'Mivisor2')
+    show_group_value_dialog = qtc.pyqtSignal()
     def __init__(self):
         super(MainWindow, self).__init__()
 
@@ -23,6 +24,9 @@ class MainWindow(qtw.QMainWindow):
         file_menu = menubar.addMenu('File')
         help_menu = menubar.addMenu('Help')
         registry_menu = menubar.addMenu('Registry')
+        tool_menu = menubar.addMenu('Tools')
+        self.grouping_menu = tool_menu.addAction('Group values', self.show_group_value_dialog.emit)
+        self.grouping_menu.setDisabled(True)
         drug_registry = registry_menu.addAction('Drug', self.showDrugRegistryDialog)
         organism_registry = registry_menu.addAction('Organism', self.showOrgRegistryDialog)
         new_proj_action = file_menu.addAction('New Project...', self.showNewProjectDialog)
@@ -374,6 +378,8 @@ class MainWindow(qtw.QMainWindow):
         main_project_window = pjd.MainWindow(self)
         main_project_window.show()
         main_project_window.close_signal.connect(self.show)
+        self.grouping_menu.setEnabled(True)
+        self.show_group_value_dialog.connect(main_project_window.showGroupValuesDialog)
 
     def save_drug_registry(self):
         yaml.dump(self.drug_data, stream=open('drugs.yaml', 'w'), Dumper=yaml.Dumper)

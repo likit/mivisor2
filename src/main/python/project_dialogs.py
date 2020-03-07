@@ -497,6 +497,38 @@ class MainWindow(qtw.QMainWindow):
                 qtw.QMessageBox.Ok
             )
 
+    @qtc.pyqtSlot()
+    def showGroupValuesDialog(self):
+        dialog = qtw.QDialog(self)
+        dialog.vlayout = qtw.QVBoxLayout()
+        dialog.setLayout(dialog.vlayout)
+        dialog.hlayout = qtw.QHBoxLayout()
+        dialog.coltree = qtw.QTreeWidget()
+        dialog.coltree.setHeaderLabels(['Column'])
+        dialog.coltree.setAlternatingRowColors(True)
+        dialog.grouptree = qtw.QTreeWidget()
+        dialog.grouptree.setHeaderLabels(['Group', 'Column'])
+        dialog.grouptree.setAlternatingRowColors(True)
+        dialog.hlayout.addWidget(dialog.coltree)
+        dialog.hlayout.addWidget(dialog.grouptree)
+        dialog.vlayout.addLayout(dialog.hlayout)
+        dialog.button_box = qtw.QDialogButtonBox(dialog)
+        dialog.button_box.setStandardButtons(qtw.QDialogButtonBox.Ok | qtw.QDialogButtonBox.Cancel)
+        dialog.button_box.accepted.connect(lambda: dialog.close)
+        dialog.button_box.rejected.connect(lambda: dialog.close)
+        dialog.vlayout.addWidget(dialog.button_box)
+
+        dialog.button_group = qtw.QGroupBox('Edit')
+        dialog.button_group_layout = qtw.QVBoxLayout()
+        dialog.button_group.setLayout(dialog.button_group_layout)
+        add_group_btn = qtw.QPushButton('Add group', dialog.button_group)
+        remove_group_btn = qtw.QPushButton('Remove group', dialog.button_group)
+        dialog.button_group_layout.addWidget(add_group_btn)
+        dialog.button_group_layout.addWidget(remove_group_btn)
+        dialog.hlayout.addWidget(dialog.button_group)
+        dialog.show()
+
+
 
 class ProjectSettingDialog(qtw.QDialog):
     settings = qtc.QSettings('MUMT', 'Mivisor2')
