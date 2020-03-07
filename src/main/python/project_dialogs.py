@@ -1,13 +1,16 @@
+import os
+import xlrd
+import pandas as pd
+from pandas.api.types import is_datetime64_any_dtype
+import datetime as dt
+import yaml
+
 import PyQt5.QtWidgets as qtw
 import PyQt5.QtCore as qtc
 import PyQt5.QtGui as qtg
-import xlrd
-import pandas as pd
-from data_models import PandasModel
 
+from data_models import PandasModel
 from config_template import config
-import os
-import yaml
 
 
 class NotificationDialog(qtw.QDialog):
@@ -194,26 +197,24 @@ class MainWindow(qtw.QMainWindow):
 
         field_edit_layout = qtw.QVBoxLayout()
         self.column_treewidget = qtw.QTreeWidget()
-        self.column_treewidget.setHeaderLabels(['Name', 'Key', 'Date', 'Drug', 'Alias'])
+        self.column_treewidget.setHeaderLabels(['Name', 'Key', 'Date', 'Drug', 'Alias', 'Description'])
         self.column_treewidget.setAlternatingRowColors(True)
+        self.column_treewidget.itemClicked.connect(self.column_treewidget_item_clicked)
+        self.column_treewidget.currentItemChanged.connect(self.column_treewidget_current_item_changed)
+        self.column_treewidget.setSelectionMode(qtw.QAbstractItemView.SingleSelection)
         field_edit_layout.addWidget(self.column_treewidget)
-        field_detail_layout = qtw.QFormLayout()
-        field_detail_layout.setFieldGrowthPolicy(qtw.QFormLayout.ExpandingFieldsGrow)
-        self.field_alias_edit = qtw.QLineEdit()
-        self.field_alias_edit.setSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding)
-        self.field_desc_edit = qtw.QLineEdit()
-        self.field_desc_edit.setSizePolicy(qtw.QSizePolicy.Expanding, qtw.QSizePolicy.Expanding)
-        field_detail_layout.addRow('Alias', self.field_alias_edit)
-        field_detail_layout.addRow('Description', self.field_desc_edit)
-        field_edit_layout.addLayout(field_detail_layout)
 
         field_group.layout().addLayout(field_edit_layout)
-        field_group.layout().addWidget(qtw.QTextEdit())
+        self.info_textedit = qtw.QTextEdit()
+        field_group.layout().addWidget(self.info_textedit)
         field_group.setSizePolicy(qtw.QSizePolicy.Preferred,
                                   qtw.QSizePolicy.Fixed)
         self.data_table = qtw.QTableView()
         self.data_table.setSizePolicy(qtw.QSizePolicy.Expanding,
                                  qtw.QSizePolicy.Preferred)
+        self.data_table.setSelectionBehavior(qtw.QTableView.SelectColumns)
+        self.data_table.clicked.connect(self.data_table_item_changed)
+        self.data_table.horizontalHeader().sectionClicked.connect(self.data_table_column_changed)
         vlayout.addWidget(info_group)
         vlayout.addWidget(self.data_table)
         vlayout.addWidget(field_group)
@@ -237,7 +238,8 @@ class MainWindow(qtw.QMainWindow):
 
         save_config_action = toolbar.addAction(
             qtg.QIcon('../icons/Koloria-Icon-Set/File_List.png'),
-            'Save properties',
+            'Save profile',
+            self.save_config_data
         )
 
         project_config_action = toolbar.addAction(
@@ -333,19 +335,120 @@ class MainWindow(qtw.QMainWindow):
         self.dataframe = PandasModel(df, head_row=20)
         self.data_table.setModel(self.dataframe)
         self.column_items = []
-        for n, col in enumerate(self.dataframe.columns):
+        keep_columns = self.config_data.get('keep_columns', [])
+        for n, col in enumerate(self.data_table.model().columns):
+            keep_columns.append(col)
             citem = qtw.QTreeWidgetItem(self.column_treewidget)
             citem.setText(0, col)
-            # citem.setIcon(1, self.style().standardIcon(qtw.QStyle.SP_DialogCancelButton))
-            # citem.setIcon(2, self.style().standardIcon(qtw.QStyle.SP_DialogCancelButton))
-            # citem.setIcon(3, self.style().standardIcon(qtw.QStyle.SP_DialogCancelButton))
+            citem.setText(4, col)
+            citem.setText(5, '')
             citem.setCheckState(0, qtc.Qt.Checked)
             citem.setCheckState(1, qtc.Qt.Unchecked)
             citem.setCheckState(2, qtc.Qt.Unchecked)
             citem.setCheckState(3, qtc.Qt.Unchecked)
+            citem.setFlags(citem.flags() | qtc.Qt.ItemIsEditable)
             self.column_items.append(citem)
 
+        self.config_data['keep_columns'] = keep_columns
+
         #TODO: check if the date column is a valid date value
+
+    def column_treewidget_item_clicked(self, item, ncol):
+        colname = item.text(0)
+        if ncol == 1:
+            key_columns = self.config_data.get('key_columns', [])
+            if item.checkState(ncol) == qtc.Qt.Checked:
+                if colname not in key_columns:
+                    key_columns.append(colname)
+                    self.config_data['key_columns'] = key_columns
+                print(self.config_data['key_columns'])
+            else:
+                if colname in key_columns:
+                    key_columns.remove(colname)
+                self.config_data['key_columns'] = key_columns
+                print(self.config_data['key_columns'])
+        elif ncol == 0:
+            keep_columns = self.config_data.get('keep_columns', [])
+            if item.checkState(ncol) == qtc.Qt.Checked:
+                if colname not in keep_columns:
+                    keep_columns.append(colname)
+                    self.config_data['keep_columns'] = keep_columns
+                print(self.config_data['keep_columns'])
+            else:
+                if colname in keep_columns:
+                    keep_columns.remove(colname)
+                self.config_data['keep_columns'] = keep_columns
+                print(self.config_data['keep_columns'])
+        elif ncol == 2:
+            date_columns = self.config_data.get('date_columns', [])
+            if item.checkState(ncol) == qtc.Qt.Checked:
+                if not is_datetime64_any_dtype(self.data_table.model().data[colname]):
+                    response = qtw.QMessageBox.warning(
+                        self,
+                        'Invalid Date Data',
+                        'Dates in this column may not be valid.'
+                        '\nYou can use Excel to create valid dates from data in this column.',
+                        qtw.QMessageBox.Abort
+                    )
+                    if response == qtw.QMessageBox.Abort:
+                        item.setCheckState(2, qtc.Qt.Unchecked)
+                else:
+                    if colname not in date_columns:
+                        date_columns.append(colname)
+                    self.config_data['date_columns'] = date_columns
+                    print(self.config_data.get('date_columns'))
+            else:
+                if colname in date_columns:
+                    date_columns.remove(colname)
+                self.config_data['date_columns'] = date_columns
+                print(self.config_data.get('date_columns'))
+        if ncol == 3:
+            drug_columns = self.config_data.get('drug_columns', [])
+            if item.checkState(ncol) == qtc.Qt.Checked:
+                if colname not in drug_columns:
+                    drug_columns.append(colname)
+                    self.config_data['drug_columns'] = drug_columns
+                print(self.config_data['drug_columns'])
+            else:
+                if colname in drug_columns:
+                    drug_columns.remove(colname)
+                self.config_data['drug_columns'] = drug_columns
+                print(self.config_data['drug_columns'])
+
+    def column_treewidget_current_item_changed(self):
+        column = self.column_treewidget.currentItem().text(0)
+        self.info_textedit.setText(str(self.data_table.model().describe(column)))
+        self.data_table.selectColumn(self.data_table.model().columns.to_list().index(column))
+
+    @qtc.pyqtSlot(int)
+    def data_table_column_changed(self, colindex):
+        self.column_treewidget.setCurrentItem(self.column_items[colindex])
+        print(colindex)
+
+    @qtc.pyqtSlot(qtc.QModelIndex)
+    def data_table_item_changed(self, curindex):
+        print(curindex.column())
+
+    def save_config_data(self):
+        config_filepath = os.path.join(self.settings.value('current_proj_dir'), 'config.yml')
+        try:
+            yaml.dump(self.config_data,
+                      stream=open(config_filepath, 'w'),
+                      Dumper=yaml.Dumper)
+        except Exception as e:
+            response = qtw.QMessageBox.critical(
+                self,
+                'Error Occurred',
+                str(e),
+                qtw.QMessageBox.Abort
+            )
+        else:
+            qtw.QMessageBox.information(
+                self,
+                'Finished',
+                'Project profile have been saved.',
+                qtw.QMessageBox.Ok
+            )
 
 
 class ProjectSettingDialog(qtw.QDialog):
