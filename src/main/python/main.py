@@ -10,6 +10,8 @@ import project_dialogs as pjd
 import sys
 import yaml
 
+import pandas as pd
+
 
 class MainWindow(qtw.QMainWindow):
     settings = qtc.QSettings('MUMT', 'Mivisor2')
@@ -22,6 +24,7 @@ class MainWindow(qtw.QMainWindow):
         help_menu = menubar.addMenu('Help')
         registry_menu = menubar.addMenu('Registry')
         drug_registry = registry_menu.addAction('Drug', self.showDrugRegistryDialog)
+        organism_registry = registry_menu.addAction('Organism', self.showOrgRegistryDialog)
         new_proj_action = file_menu.addAction('New Project...', self.showNewProjectDialog)
         open_action = file_menu.addAction('Open')
         help_action = help_menu.addAction('About', self.showAboutDialog)
@@ -155,6 +158,193 @@ class MainWindow(qtw.QMainWindow):
         self.drug_dialog.resize(600, 300)
         self.drug_dialog.setModal(True)
         self.drug_dialog.show()
+
+    def showOrgRegistryDialog(self):
+        self.org_data = yaml.load(open('organisms.yaml', 'r'), Loader=yaml.Loader)
+        if self.org_data is None:
+            self.org_data = {}
+        self.org_dialog = qtw.QDialog(self)
+        self.org_dialog.setWindowTitle('Organism Registry')
+        self.org_dialog.main_layout = qtw.QVBoxLayout()
+        self.org_dialog.h_layout = qtw.QHBoxLayout()
+        self.org_dialog.setLayout(self.org_dialog.main_layout)
+        self.org_dialog.org_tr = qtw.QTreeWidget()
+        self.org_dialog.org_tr.setAlternatingRowColors(True)
+        self.org_dialog.org_tr.setSelectionMode(qtw.QAbstractItemView.SingleSelection)
+        self.org_dialog.org_tr.setHeaderLabels(['Code', 'Group', 'Gram', 'Genus',
+                                                'Species', 'Subspecies', 'Property',
+                                                'Note'])
+        self.org_dialog.org_tr.doubleClicked.connect(self.show_edit_organism_dialog)
+
+        if self.org_data:
+            for org in self.org_data.values():
+                item = qtw.QTreeWidgetItem()
+                item.setText(0, org.get('code'))
+                item.setText(1, org.get('group'))
+                item.setText(2, org.get('gram'))
+                item.setText(3, org.get('genus'))
+                item.setText(4, org.get('species'))
+                item.setText(5, org.get('subspecies'))
+                item.setText(6, org.get('property'))
+                item.setText(7, org.get('note'))
+                self.org_dialog.org_tr.addTopLevelItem(item)
+
+        self.org_dialog.button_group = qtw.QGroupBox('Edit')
+        self.org_dialog.group_box_layout = qtw.QVBoxLayout()
+        self.org_dialog.group_box_layout.setAlignment(qtc.Qt.AlignTop)
+        self.org_dialog.button_group.setLayout(self.org_dialog.group_box_layout)
+        add_org_btn = qtw.QPushButton('Add', self.org_dialog.button_group)
+        add_org_btn.clicked.connect(self.show_add_organism_dialog)
+        import_org_btn = qtw.QPushButton('Import', self.org_dialog.button_group)
+        import_org_btn.clicked.connect(self.show_import_organism_dialog)
+        edit_org_btn = qtw.QPushButton('Edit', self.org_dialog.button_group)
+        edit_org_btn.clicked.connect(self.show_edit_organism_dialog)
+        remove_btn = qtw.QPushButton('Remove', self.org_dialog.button_group)
+        remove_btn.clicked.connect(self.remove_org)
+        self.org_dialog.group_box_layout.addWidget(import_org_btn)
+        self.org_dialog.group_box_layout.addWidget(add_org_btn)
+        self.org_dialog.group_box_layout.addWidget(edit_org_btn)
+        self.org_dialog.group_box_layout.addWidget(remove_btn)
+        self.org_dialog.button_box = qtw.QDialogButtonBox()
+        self.org_dialog.button_box.addButton('Save', qtw.QDialogButtonBox.AcceptRole)
+        self.org_dialog.button_box.addButton('Cancel', qtw.QDialogButtonBox.RejectRole)
+        self.org_dialog.button_box.accepted.connect(self.save_org_registry)
+        self.org_dialog.button_box.rejected.connect(self.org_dialog.close)
+        self.org_dialog.h_layout.addWidget(self.org_dialog.org_tr)
+        self.org_dialog.h_layout.addWidget(self.org_dialog.button_group)
+        self.org_dialog.layout().addLayout(self.org_dialog.h_layout)
+        self.org_dialog.layout().addWidget(self.org_dialog.button_box)
+        self.org_dialog.resize(800, 400)
+        self.org_dialog.show()
+
+    def show_add_organism_dialog(self):
+        form = qtw.QDialog(self)
+        form.setLayout(qtw.QVBoxLayout())
+        form_layout = qtw.QFormLayout()
+        form.code_edit = qtw.QLineEdit()
+        form.group_edit = qtw.QLineEdit()
+        form.gram_edit = qtw.QLineEdit()
+        form.genus_edit = qtw.QLineEdit()
+        form.species_edit = qtw.QLineEdit()
+        form.subspecies_edit = qtw.QLineEdit()
+        form.property_edit = qtw.QLineEdit()
+        form.note_edit = qtw.QLineEdit()
+        form_layout.addRow('Code', form.code_edit)
+        form_layout.addRow('Group', form.group_edit)
+        form_layout.addRow('Gram', form.gram_edit)
+        form_layout.addRow('Genus', form.genus_edit)
+        form_layout.addRow('Species', form.species_edit)
+        form_layout.addRow('Subspecies', form.subspecies_edit)
+        form_layout.addRow('Property', form.property_edit)
+        form_layout.addRow('Note', form.note_edit)
+        form.layout().addLayout(form_layout)
+        button_box = qtw.QDialogButtonBox()
+        button_box.addButton('Add', qtw.QDialogButtonBox.AcceptRole)
+        button_box.addButton('Cancel', qtw.QDialogButtonBox.RejectRole)
+        button_box.accepted.connect(lambda: self.add_organism(form))
+        button_box.rejected.connect(form.close)
+        form.layout().addWidget(button_box)
+        form.setModal(True)
+        form.show()
+
+    def add_organism(self, form, exists=False):
+        if exists:
+            curitem = self.org_dialog.org_tr.currentItem()
+            self.org_data.pop(curitem.text(0))
+            idx = self.org_dialog.org_tr.indexOfTopLevelItem(curitem)
+            self.org_dialog.org_tr.takeTopLevelItem(idx)
+
+        item = qtw.QTreeWidgetItem()
+        if (form.code_edit.text() and (form.genus_edit.text() or form.group_edit.text())):
+            self.org_data[form.code_edit.text()] = {
+                'code': form.code_edit.text(),
+                'group': form.group_edit.text(),
+                'gram': form.gram_edit.text(),
+                'genus': form.genus_edit.text(),
+                'species': form.species_edit.text(),
+                'subspecies': form.subspecies_edit.text(),
+                'property': form.property_edit.text(),
+                'note': form.note_edit.text(),
+            }
+            item.setText(0, form.code_edit.text())
+            item.setText(1, form.group_edit.text())
+            item.setText(2, form.gram_edit.text())
+            item.setText(3, form.genus_edit.text())
+            item.setText(4, form.species_edit.text())
+            item.setText(5, form.subspecies_edit.text())
+            item.setText(6, form.property_edit.text())
+            item.setText(7, form.note_edit.text())
+            self.org_dialog.org_tr.addTopLevelItem(item)
+            form.close()
+        else:
+            qtw.QMessageBox.warning(
+                self,
+                'Not enough information',
+                'At least code, genus or group must be given.',
+                qtw.QMessageBox.Abort
+            )
+
+    def show_import_organism_dialog(self):
+        filename, type_ = qtw.QFileDialog.getOpenFileName(
+            self.org_dialog, 'Import Organisms',
+            self.settings.value('current_proj_dir'),
+            'Excel files (*.xls *xlsx)'
+        )
+        if filename:
+            org_df = pd.read_excel(filename).fillna('')
+            for idx, row in org_df.iterrows():
+                item = qtw.QTreeWidgetItem()
+                if row.get('code') and (row.get('genus') or row.get('group')):
+                    item.setText(0, row.get('code'))
+                    item.setText(1, row.get('group'))
+                    item.setText(2, row.get('gram'))
+                    item.setText(3, row.get('genus'))
+                    item.setText(4, row.get('species'))
+                    item.setText(5, row.get('subspecies'))
+                    item.setText(6, row.get('property'))
+                    item.setText(7, row.get('note'))
+                    self.org_dialog.org_tr.addTopLevelItem(item)
+                    self.org_data[row.get('code')] = row.to_dict()
+
+    def remove_org(self):
+        curitem = self.org_dialog.org_tr.currentItem()
+        index = self.org_dialog.org_tr.indexOfTopLevelItem(curitem)
+        self.org_dialog.org_tr.takeTopLevelItem(index)
+
+    def show_edit_organism_dialog(self):
+        curitem = self.org_dialog.org_tr.currentItem()
+        form = qtw.QDialog(self)
+        form.setLayout(qtw.QVBoxLayout())
+        form_layout = qtw.QFormLayout()
+        form.code_edit = qtw.QLineEdit(curitem.text(0))
+        form.group_edit = qtw.QLineEdit(curitem.text(1))
+        form.gram_edit = qtw.QLineEdit(curitem.text(2))
+        form.genus_edit = qtw.QLineEdit(curitem.text(3))
+        form.species_edit = qtw.QLineEdit(curitem.text(4))
+        form.subspecies_edit = qtw.QLineEdit(curitem.text(5))
+        form.property_edit = qtw.QLineEdit(curitem.text(6))
+        form.note_edit = qtw.QLineEdit(curitem.text(7))
+        form_layout.addRow('Code', form.code_edit)
+        form_layout.addRow('Group', form.group_edit)
+        form_layout.addRow('Gram', form.gram_edit)
+        form_layout.addRow('Genus', form.genus_edit)
+        form_layout.addRow('Species', form.species_edit)
+        form_layout.addRow('Subspecies', form.subspecies_edit)
+        form_layout.addRow('Property', form.property_edit)
+        form_layout.addRow('Note', form.note_edit)
+        form.layout().addLayout(form_layout)
+        button_box = qtw.QDialogButtonBox()
+        button_box.addButton('Add', qtw.QDialogButtonBox.AcceptRole)
+        button_box.addButton('Cancel', qtw.QDialogButtonBox.RejectRole)
+        button_box.accepted.connect(lambda: self.add_organism(form, exists=True))
+        button_box.rejected.connect(form.close)
+        form.layout().addWidget(button_box)
+        form.setModal(True)
+        form.show()
+
+    def save_org_registry(self):
+        yaml.dump(self.org_data, stream=open('organisms.yaml', 'w'), Dumper=yaml.Dumper)
+        self.org_dialog.close()
 
     def exitProgram(self):
         response = qtw.QMessageBox.warning(
