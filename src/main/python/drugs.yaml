@@ -1,0 +1,11 @@
+Carbapenem:
+- Ertapenem;EPM
+- Meropenem;MEM
+Fluroquinolone:
+- Gentamycin;GA
+Macrolides:
+- Erythromycin;E,EA
+beta-lactamase:
+- Ampicillin;AP,AMP
+- Pennicillin;P,PG
+- Augmentin;AUG
