@@ -335,23 +335,50 @@ class MainWindow(qtw.QMainWindow):
         self.dataframe = PandasModel(df, head_row=20)
         self.data_table.setModel(self.dataframe)
         self.column_items = []
+        no_kept_columns = True
+        aliases = self.config_data.get('aliases', {})
+        descs = self.config_data.get('descs', {})
         keep_columns = self.config_data.get('keep_columns', [])
+        if keep_columns:
+            no_kept_columns = False
+        else:
+            no_kept_columns = True
+
         for n, col in enumerate(self.data_table.model().columns):
-            keep_columns.append(col)
             citem = qtw.QTreeWidgetItem(self.column_treewidget)
             citem.setText(0, col)
-            citem.setText(4, col)
-            citem.setText(5, '')
-            citem.setCheckState(0, qtc.Qt.Checked)
-            citem.setCheckState(1, qtc.Qt.Unchecked)
-            citem.setCheckState(2, qtc.Qt.Unchecked)
-            citem.setCheckState(3, qtc.Qt.Unchecked)
+            citem.setText(4, aliases.get(col, col))
+            citem.setText(5, descs.get(col, ''))
+
+            if no_kept_columns:
+                keep_columns.append(col)
+                citem.setCheckState(0, qtc.Qt.Checked)
+            else:
+                if col in keep_columns:
+                    citem.setCheckState(0, qtc.Qt.Checked)
+                else:
+                    citem.setCheckState(0, qtc.Qt.Unchecked)
+
+            if col in self.config_data.get('key_columns', []):
+                citem.setCheckState(1, qtc.Qt.Checked)
+            else:
+                citem.setCheckState(1, qtc.Qt.Unchecked)
+
+            if col in self.config_data.get('date_columns', []):
+                citem.setCheckState(2, qtc.Qt.Checked)
+            else:
+                citem.setCheckState(2, qtc.Qt.Unchecked)
+
+            if col in self.config_data.get('drug_columns', []):
+                citem.setCheckState(3, qtc.Qt.Checked)
+            else:
+                citem.setCheckState(3, qtc.Qt.Unchecked)
+
             citem.setFlags(citem.flags() | qtc.Qt.ItemIsEditable)
             self.column_items.append(citem)
 
         self.config_data['keep_columns'] = keep_columns
 
-        #TODO: check if the date column is a valid date value
 
     def column_treewidget_item_clicked(self, item, ncol):
         colname = item.text(0)
@@ -431,6 +458,13 @@ class MainWindow(qtw.QMainWindow):
 
     def save_config_data(self):
         config_filepath = os.path.join(self.settings.value('current_proj_dir'), 'config.yml')
+        aliases = {}
+        descs = {}
+        for citem in self.column_items:
+            aliases[citem.text(0)] = citem.text(4)
+            descs[citem.text(0)] = citem.text(5)
+        self.config_data['aliases'] = aliases
+        self.config_data['descs'] = descs
         try:
             yaml.dump(self.config_data,
                       stream=open(config_filepath, 'w'),
