@@ -137,6 +137,7 @@ class MainWindow(qtw.QMainWindow):
 
         self.drug_list = qtw.QTreeWidget()
         self.drug_list.setHeaderLabels(['Name', 'Abbreviation'])
+        self.drug_list.doubleClicked.connect(self.show_edit_drug_dialog)
         drug_items = defaultdict(list)
         drug_group_items = {}
         for drug_group in self.drug_data:
