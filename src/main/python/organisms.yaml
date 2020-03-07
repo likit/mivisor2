@@ -1,0 +1,158 @@
+ACNBMX:
+  code: ACNBMX
+  genus: Acinetobacter
+  gram: ''
+  group: ''
+  property: XDR
+  species: baumannii
+CNDTRP:
+  code: CNDTRP
+  genus: Candida
+  gram: ''
+  group: ''
+  property: ''
+  species: tropicalis
+CRNSPP:
+  code: CRNSPP
+  genus: Corynebacterium
+  gram: ''
+  group: ''
+  property: ''
+  species: spp.
+ENCFCL:
+  code: ENCFCL
+  genus: Enterococcus
+  gram: ''
+  group: ''
+  property: ''
+  species: faecalis
+ENCFCM:
+  code: ENCFCM
+  genus: Enterococcus
+  gram: ''
+  group: ''
+  property: ''
+  species: faecium
+ENTCLC:
+  code: ENTCLC
+  genus: Enterobacter
+  gram: ''
+  group: ''
+  property: ''
+  species: cloacae
+ESCCL+:
+  code: ESCCL+
+  genus: Escherichia
+  gram: ''
+  group: ''
+  property: ESBL
+  species: coli
+ESCCLI:
+  code: ESCCLI
+  genus: Escherichia
+  gram: ''
+  group: ''
+  property: ''
+  species: coli
+KLBP*+:
+  code: KLBP*+
+  genus: Klebsiella
+  gram: ''
+  group: ''
+  property: ESBL
+  species: pneumoniae
+KLBPN+:
+  code: KLBPN+
+  genus: Klebsiella
+  gram: ''
+  group: ''
+  property: ESBL
+  species: pneumoniae
+KLBPNM:
+  code: KLBPNM
+  genus: Klebsiella
+  gram: ''
+  group: ''
+  property: ''
+  species: pneumoniae
+PRTMR+:
+  code: PRTMR+
+  genus: Proteus
+  gram: ''
+  group: ''
+  property: ESBL
+  species: mirabilis
+PRTMRB:
+  code: PRTMRB
+  genus: Proteus
+  gram: ''
+  group: ''
+  property: ''
+  species: mirabilis
+PSDARG:
+  code: PSDARG
+  genus: Pseudomonas
+  gram: ''
+  group: ''
+  property: ''
+  species: aeruginosa
+PSDARX:
+  code: PSDARX
+  genus: Pseudomonas
+  gram: ''
+  group: ''
+  property: XDR
+  species: aeruginosa
+PSDMLT:
+  code: PSDMLT
+  genus: Stenotrophomonas
+  gram: ''
+  group: ''
+  property: ''
+  species: maltophilia
+STPA-S:
+  code: STPA-S
+  genus: Staphylococcus
+  gram: ''
+  group: ''
+  property: ''
+  species: aureus
+STPARS:
+  code: STPARS
+  genus: Staphylococcus
+  gram: ''
+  group: ''
+  property: ''
+  species: aureus
+STPCNG:
+  code: STPCNG
+  genus: Staphylococcus
+  gram: ''
+  group: ''
+  property: coagulase negative
+  species: spp.
+STTA-0:
+  code: STTA-0
+  genus: Streptococcus
+  gram: ''
+  group: A
+  note: ''
+  property: ''
+  species: spp.
+  subspecies: ''
+STTA00:
+  code: STTA00
+  genus: Streptococcus
+  gram: ''
+  group: A
+  note: ''
+  property: beta-hemolytic
+  species: spp.
+  subspecies: ''
+STTPNM:
+  code: STTPNM
+  genus: Streptococcus
+  gram: ''
+  group: ''
+  property: ''
+  species: pneumoniae
