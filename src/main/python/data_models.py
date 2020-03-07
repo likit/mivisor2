@@ -22,9 +22,16 @@ class PandasModel(qtc.QAbstractTableModel):
     def columns(self):
         return self.data.columns
 
+    def describe(self, column):
+        if self.data[column].dtype == 'object':
+            return self.data[column].value_counts()
+        else:
+            return self.data[column].describe()
+
     def data(self, index, role):
         if role == qtc.Qt.DisplayRole:
-            return self.data.values[index.row(), index.column()]
+            # convert data to string or date will not display
+            return str(self.data.values[index.row(), index.column()])
 
     def headerData(self, section, orientation, role=None):
         if(
@@ -33,3 +40,4 @@ class PandasModel(qtc.QAbstractTableModel):
             return self.data.columns[section]
         else:
             return super(PandasModel, self).headerData(section, orientation, role)
+
