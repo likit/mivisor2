@@ -197,7 +197,7 @@ class MainWindow(qtw.QMainWindow):
 
         field_edit_layout = qtw.QVBoxLayout()
         self.column_treewidget = qtw.QTreeWidget()
-        self.column_treewidget.setHeaderLabels(['Name', 'Key', 'Date', 'Drug', 'Alias', 'Description'])
+        self.column_treewidget.setHeaderLabels(['Name', 'Key', 'Date', 'Drug', 'Organism', 'Alias', 'Description'])
         self.column_treewidget.setAlternatingRowColors(True)
         self.column_treewidget.itemClicked.connect(self.column_treewidget_item_clicked)
         self.column_treewidget.currentItemChanged.connect(self.column_treewidget_current_item_changed)
@@ -332,13 +332,19 @@ class MainWindow(qtw.QMainWindow):
             self.pandas_excel_reader.start()
 
     def read_from_excel_action(self, df):
+        drug_data = yaml.load(open('drugs.yaml'), Loader=yaml.Loader)
         self.dataframe = PandasModel(df, head_row=20)
         self.data_table.setModel(self.dataframe)
         self.column_items = []
-        no_kept_columns = True
         aliases = self.config_data.get('aliases', {})
         descs = self.config_data.get('descs', {})
         keep_columns = self.config_data.get('keep_columns', [])
+        drug_abbrs = []
+        for group, drugs in drug_data.items():
+            for drug in drugs:
+                name, abbrs = drug.split(';')
+                drug_abbrs += abbrs.split(',')
+
         if keep_columns:
             no_kept_columns = False
         else:
@@ -347,8 +353,8 @@ class MainWindow(qtw.QMainWindow):
         for n, col in enumerate(self.data_table.model().columns):
             citem = qtw.QTreeWidgetItem(self.column_treewidget)
             citem.setText(0, col)
-            citem.setText(4, aliases.get(col, col))
-            citem.setText(5, descs.get(col, ''))
+            citem.setText(5, aliases.get(col, col))
+            citem.setText(6, descs.get(col, ''))
 
             if no_kept_columns:
                 keep_columns.append(col)
@@ -369,10 +375,17 @@ class MainWindow(qtw.QMainWindow):
             else:
                 citem.setCheckState(2, qtc.Qt.Unchecked)
 
-            if col in self.config_data.get('drug_columns', []):
+            if (len(self.config_data.get('drug_columns', [])) == 0 and col in drug_abbrs):
+                citem.setCheckState(3, qtc.Qt.Checked)
+            elif col in self.config_data.get('drug_columns', []):
                 citem.setCheckState(3, qtc.Qt.Checked)
             else:
                 citem.setCheckState(3, qtc.Qt.Unchecked)
+
+            if col == self.config_data.get('organism_column', ''):
+                citem.setCheckState(4, qtc.Qt.Checked)
+            else:
+                citem.setCheckState(4, qtc.Qt.Unchecked)
 
             citem.setFlags(citem.flags() | qtc.Qt.ItemIsEditable)
             self.column_items.append(citem)
@@ -388,24 +401,20 @@ class MainWindow(qtw.QMainWindow):
                 if colname not in key_columns:
                     key_columns.append(colname)
                     self.config_data['key_columns'] = key_columns
-                print(self.config_data['key_columns'])
             else:
                 if colname in key_columns:
                     key_columns.remove(colname)
                 self.config_data['key_columns'] = key_columns
-                print(self.config_data['key_columns'])
         elif ncol == 0:
             keep_columns = self.config_data.get('keep_columns', [])
             if item.checkState(ncol) == qtc.Qt.Checked:
                 if colname not in keep_columns:
                     keep_columns.append(colname)
                     self.config_data['keep_columns'] = keep_columns
-                print(self.config_data['keep_columns'])
             else:
                 if colname in keep_columns:
                     keep_columns.remove(colname)
                 self.config_data['keep_columns'] = keep_columns
-                print(self.config_data['keep_columns'])
         elif ncol == 2:
             date_columns = self.config_data.get('date_columns', [])
             if item.checkState(ncol) == qtc.Qt.Checked:
@@ -423,24 +432,28 @@ class MainWindow(qtw.QMainWindow):
                     if colname not in date_columns:
                         date_columns.append(colname)
                     self.config_data['date_columns'] = date_columns
-                    print(self.config_data.get('date_columns'))
             else:
                 if colname in date_columns:
                     date_columns.remove(colname)
                 self.config_data['date_columns'] = date_columns
-                print(self.config_data.get('date_columns'))
-        if ncol == 3:
+        elif ncol == 3:
             drug_columns = self.config_data.get('drug_columns', [])
             if item.checkState(ncol) == qtc.Qt.Checked:
                 if colname not in drug_columns:
                     drug_columns.append(colname)
                     self.config_data['drug_columns'] = drug_columns
-                print(self.config_data['drug_columns'])
             else:
                 if colname in drug_columns:
                     drug_columns.remove(colname)
                 self.config_data['drug_columns'] = drug_columns
-                print(self.config_data['drug_columns'])
+        elif ncol == 4:
+            organism_column = self.config_data.get('organism_column', '')
+            if item.checkState(ncol) == qtc.Qt.Checked:
+                if colname != organism_column:
+                    self.config_data['organism_column'] = colname
+            else:
+                if colname == organism_column:
+                    self.config_data['organism_column'] = ''
 
     def column_treewidget_current_item_changed(self):
         column = self.column_treewidget.currentItem().text(0)
@@ -461,8 +474,8 @@ class MainWindow(qtw.QMainWindow):
         aliases = {}
         descs = {}
         for citem in self.column_items:
-            aliases[citem.text(0)] = citem.text(4)
-            descs[citem.text(0)] = citem.text(5)
+            aliases[citem.text(0)] = citem.text(5)
+            descs[citem.text(0)] = citem.text(6)
         self.config_data['aliases'] = aliases
         self.config_data['descs'] = descs
         try:
