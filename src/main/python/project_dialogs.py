@@ -157,7 +157,7 @@ class NewProjectDialog(qtw.QDialog):
                 self,
                 'Warning',
                 'The directory already exists. Some files will be overwritten.',
-                qtw.QMessageBox.Yes|qtw.QMessageBox.Abort
+                qtw.QMessageBox.Yes | qtw.QMessageBox.Abort
             )
             if response == qtw.QMessageBox.Yes:
                 self.initiate_proj_dir()
@@ -211,7 +211,7 @@ class MainWindow(qtw.QMainWindow):
                                   qtw.QSizePolicy.Fixed)
         self.data_table = qtw.QTableView()
         self.data_table.setSizePolicy(qtw.QSizePolicy.Expanding,
-                                 qtw.QSizePolicy.Preferred)
+                                      qtw.QSizePolicy.Preferred)
         self.data_table.setSelectionBehavior(qtw.QTableView.SelectColumns)
         self.data_table.clicked.connect(self.data_table_item_changed)
         self.data_table.horizontalHeader().sectionClicked.connect(self.data_table_column_changed)
@@ -307,13 +307,13 @@ class MainWindow(qtw.QMainWindow):
                 )
             )
             self.xlrdDialog = NotificationDialog(self,
-                               'Action in Progress',
-                               'Scanning the Excel file, please wait..')
+                                                 'Action in Progress',
+                                                 'Scanning the Excel file, please wait..')
             self.xlrd_reader.started.connect(self.xlrdDialog.show)
             self.xlrd_reader.finished.connect(self.xlrdDialog.close)
             self.xlrd_reader.start()
 
-    #TODO: use a better method name
+    # TODO: use a better method name
     def showWorksheetListDlg(self, filename, worksheets):
         worksheet, ok = qtw.QInputDialog.getItem(
             self,
@@ -391,7 +391,6 @@ class MainWindow(qtw.QMainWindow):
             self.column_items.append(citem)
 
         self.config_data['keep_columns'] = keep_columns
-
 
     def column_treewidget_item_clicked(self, item, ncol):
         colname = item.text(0)
@@ -500,33 +499,156 @@ class MainWindow(qtw.QMainWindow):
     @qtc.pyqtSlot()
     def showGroupValuesDialog(self):
         dialog = qtw.QDialog(self)
+        colname, ok = qtw.QInputDialog.getItem(
+            self,
+            'Select column',
+            'Columns',
+            self.config_data['keep_columns'],
+            False
+        )
+        if not ok:
+            return
+
+        dialog.colname = colname
+        dialog.groups = {}
         dialog.vlayout = qtw.QVBoxLayout()
         dialog.setLayout(dialog.vlayout)
         dialog.hlayout = qtw.QHBoxLayout()
         dialog.coltree = qtw.QTreeWidget()
         dialog.coltree.setHeaderLabels(['Column'])
         dialog.coltree.setAlternatingRowColors(True)
+
+        if colname and ok:
+            for val in self.data_table.model().data[colname].unique():
+                item = qtw.QTreeWidgetItem(dialog.coltree)
+                item.setText(0, val)
+
         dialog.grouptree = qtw.QTreeWidget()
         dialog.grouptree.setHeaderLabels(['Group', 'Column'])
         dialog.grouptree.setAlternatingRowColors(True)
+        dialog.button_vlayout = qtw.QVBoxLayout()  # two buttons between the list widgets
+        left_btn = qtw.QPushButton(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Button_Back.png'),
+            '',
+            dialog,
+            clicked=lambda: self.move_item_back_from_group(dialog)
+        )
+        left_btn.setStyleSheet(
+            'QPushButton {border: none;}'
+        )
+        left_btn.setIconSize(qtc.QSize(48, 48))
+        right_btn = qtw.QPushButton(
+            qtg.QIcon('../icons/Koloria-Icon-Set/Button_Next.png'),
+            '',
+            dialog,
+            clicked=lambda: self.move_item_to_group(dialog)
+        )
+        right_btn.setStyleSheet(
+            'QPushButton {border: none;}'
+        )
+        right_btn.setIconSize(qtc.QSize(48, 48))
+        dialog.button_vlayout.addWidget(left_btn)
+        dialog.button_vlayout.addWidget(right_btn)
         dialog.hlayout.addWidget(dialog.coltree)
+        dialog.hlayout.addLayout(dialog.button_vlayout)
         dialog.hlayout.addWidget(dialog.grouptree)
         dialog.vlayout.addLayout(dialog.hlayout)
         dialog.button_box = qtw.QDialogButtonBox(dialog)
         dialog.button_box.setStandardButtons(qtw.QDialogButtonBox.Ok | qtw.QDialogButtonBox.Cancel)
-        dialog.button_box.accepted.connect(lambda: dialog.close)
+        dialog.button_box.accepted.connect(lambda: self.show_create_new_group_column_dialog(dialog))
         dialog.button_box.rejected.connect(lambda: dialog.close)
         dialog.vlayout.addWidget(dialog.button_box)
 
         dialog.button_group = qtw.QGroupBox('Edit')
         dialog.button_group_layout = qtw.QVBoxLayout()
+        dialog.button_group_layout.setAlignment(qtc.Qt.AlignTop)
         dialog.button_group.setLayout(dialog.button_group_layout)
         add_group_btn = qtw.QPushButton('Add group', dialog.button_group)
+        add_group_btn.clicked.connect(lambda: self.open_add_group_dialog(dialog))
         remove_group_btn = qtw.QPushButton('Remove group', dialog.button_group)
         dialog.button_group_layout.addWidget(add_group_btn)
         dialog.button_group_layout.addWidget(remove_group_btn)
         dialog.hlayout.addWidget(dialog.button_group)
         dialog.show()
+
+    def open_add_group_dialog(self, dialog):
+        group, ok = qtw.QInputDialog.getText(
+            self,
+            'New Group',
+            'Group'
+        )
+        if group and ok:
+            item = qtw.QTreeWidgetItem(dialog.grouptree)
+            item.setText(0, group)
+
+    def move_item_to_group(self, dialog):
+        curcol_item = dialog.coltree.currentItem()
+        curgroup_item = dialog.grouptree.currentItem()
+        if curgroup_item is None or curcol_item is None:
+            qtw.QMessageBox.critical(
+                dialog,
+                'No values selected',
+                'Please choose a value and a group.'
+            )
+            return
+
+        curcol_item_idx = dialog.coltree.indexOfTopLevelItem(curcol_item)
+        curcol_item_without_parent = dialog.coltree.takeTopLevelItem(curcol_item_idx)
+        curgroup_item.addChild(curcol_item_without_parent)
+        dialog.groups[curcol_item.text(0)] = curgroup_item.text(0)
+
+    def move_item_back_from_group(self, dialog):
+        curgroup_item = dialog.grouptree.currentItem()
+        if curgroup_item is None:
+            qtw.QMessageBox.critical(
+                dialog,
+                'No value selected',
+                'Please choose a value.'
+            )
+            return
+
+        if curgroup_item.parent():
+            idx = curgroup_item.parent().indexOfChild(curgroup_item)
+            item_without_parent = curgroup_item.parent().takeChild(idx)
+            dialog.coltree.addTopLevelItem(item_without_parent)
+            dialog.groups.pop(curgroup_item.text(0))
+
+    def show_create_new_group_column_dialog(self, dialog):
+        def close_dialogs(form, dialog):
+            form.close()
+            dialog.close()
+
+        def create_new_column(self, form, dialog):
+            df = self.data_table.model().data
+            colname_idx = df.columns.get_loc(dialog.colname)
+            if form.default_edit.text() == '':
+                data = df[dialog.colname].apply(lambda x: dialog.groups.get(x, x))
+                df.insert(colname_idx + 1, form.colname_edit.text(), data)
+            else:
+                default = form.default_edit.text()
+                data = df[dialog.colname].apply(lambda x: dialog.groups.get(x, default))
+                df.insert(colname_idx + 1, form.colname_edit.text(), data)
+            self.data_table.model().layoutChanged.emit()
+            close_dialogs(form, dialog)
+
+
+        form = qtw.QDialog(self)
+        form.setLayout(qtw.QVBoxLayout())
+        form_layout = qtw.QFormLayout()
+        form.colname_edit = qtw.QLineEdit()
+        form.default_edit = qtw.QLineEdit()
+        form_layout.addRow('Column Name', form.colname_edit)
+        form_layout.addRow('Default Value', form.default_edit)
+        form.button_box = qtw.QDialogButtonBox()
+        form.button_box.setStandardButtons(
+            qtw.QDialogButtonBox.Save | qtw.QDialogButtonBox.Cancel
+        )
+        form.button_box.accepted.connect(lambda: create_new_column(self, form, dialog))
+        form.button_box.rejected.connect(dialog.close)
+        form.layout().addLayout(form_layout)
+        form.layout().addWidget(form.button_box)
+        form.setModal(True)
+        form.show()
 
 
 
@@ -546,7 +668,7 @@ class ProjectSettingDialog(qtw.QDialog):
         form_layout = qtw.QFormLayout()
         form_layout.addRow('Creator', self.creator_edit)
         form_layout.addRow('Description', self.desc_edit)
-        button_box = qtw.QDialogButtonBox(qtw.QDialogButtonBox.Save|qtw.QDialogButtonBox.Cancel)
+        button_box = qtw.QDialogButtonBox(qtw.QDialogButtonBox.Save | qtw.QDialogButtonBox.Cancel)
         button_box.accepted.connect(self.accept)
         button_box.rejected.connect(self.reject)
         layout.addLayout(form_layout)
@@ -567,4 +689,3 @@ class ProjectSettingDialog(qtw.QDialog):
 
     def reject(self):
         super(ProjectSettingDialog, self).reject()
-
