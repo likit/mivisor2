@@ -181,7 +181,7 @@ class MainProjectWindow(qtw.QMainWindow):
         registry_menu = menubar.addMenu('Registry')
         tool_menu = menubar.addMenu('Tools')
         group_value_menu = tool_menu.addMenu('Group values')
-        self.group_text_menu = group_value_menu.addAction('Group text values', self.showGroupValuesDialog)
+        self.group_text_menu = group_value_menu.addAction('Group text values', self.show_group_values_dialog)
         self.manage_groups = group_value_menu.addAction('Manage columns')
         drug_registry = registry_menu.addAction('Drug', self.showDrugRegistryDialog)
         organism_registry = registry_menu.addAction('Organism', self.showOrgRegistryDialog)
@@ -510,7 +510,7 @@ class MainProjectWindow(qtw.QMainWindow):
             )
 
     @qtc.pyqtSlot()
-    def showGroupValuesDialog(self):
+    def show_group_values_dialog(self):
         dialog = qtw.QDialog(self)
         colname, ok = qtw.QInputDialog.getItem(
             self,
@@ -634,14 +634,51 @@ class MainProjectWindow(qtw.QMainWindow):
         def create_new_column(self, form, dialog):
             df = self.data_table.model().data
             colname_idx = df.columns.get_loc(dialog.colname)
+            default = form.default_edit.text()
             if form.default_edit.text() == '':
                 data = df[dialog.colname].apply(lambda x: dialog.groups.get(x, x))
                 df.insert(colname_idx + 1, form.colname_edit.text(), data)
             else:
-                default = form.default_edit.text()
                 data = df[dialog.colname].apply(lambda x: dialog.groups.get(x, default))
                 df.insert(colname_idx + 1, form.colname_edit.text(), data)
             self.data_table.model().layoutChanged.emit()
+            item = qtw.QTreeWidgetItem()
+            item.setText(0, form.colname_edit.text())
+            item.setCheckState(0, qtc.Qt.Checked)
+            item.setCheckState(1, qtc.Qt.Unchecked)
+            item.setCheckState(2, qtc.Qt.Unchecked)
+            item.setCheckState(3, qtc.Qt.Unchecked)
+            item.setCheckState(4, qtc.Qt.Unchecked)
+            self.column_treewidget.insertTopLevelItem(colname_idx+1, item)
+            custom_columns = self.config_data.get('custom_columns', {})
+            custom_columns[form.colname_edit.text()] = {
+                'colname': dialog.colname,
+                'values': dialog.groups,
+                'default': default
+            }
+            self.config_data['custom_columns'] = custom_columns
+            response = qtw.QMessageBox.question(
+                self,
+                'Save New Column',
+                'Do you to save the new column to the profile?',
+                qtw.QMessageBox.Yes | qtw.QMessageBox.No, qtw.QMessageBox.Yes
+            )
+            if response == qtw.QMessageBox.Yes:
+                try:
+                    config_filepath = os.path.join(self.settings.value('current_proj_dir'), 'config.yml')
+                    yaml.dump(self.config_data, stream=open(config_filepath, 'w'), Dumper=yaml.Dumper)
+                except:
+                    qtw.QMessageBox.critical(
+                        self,
+                        'Error Occurred.',
+                        'Failed to save data to file.'
+                    )
+                else:
+                    qtw.QMessageBox.information(
+                        self,
+                        'File Saved.',
+                        'File saved successfully.'
+                    )
             close_dialogs(form, dialog)
 
 
