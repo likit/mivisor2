@@ -25,8 +25,11 @@ class MainWindow(qtw.QMainWindow):
         help_menu = menubar.addMenu('Help')
         registry_menu = menubar.addMenu('Registry')
         tool_menu = menubar.addMenu('Tools')
-        self.grouping_menu = tool_menu.addAction('Group values', self.show_group_value_dialog.emit)
-        self.grouping_menu.setDisabled(True)
+        group_value_menu = tool_menu.addMenu('Group values')
+        self.group_text_menu = group_value_menu.addAction('Group text values',
+                                                          self.show_group_value_dialog.emit)
+        self.group_text_menu.setDisabled(True)
+        self.manage_groups = group_value_menu.addAction('Manage columns')
         drug_registry = registry_menu.addAction('Drug', self.showDrugRegistryDialog)
         organism_registry = registry_menu.addAction('Organism', self.showOrgRegistryDialog)
         new_proj_action = file_menu.addAction('New Project...', self.showNewProjectDialog)
@@ -378,7 +381,7 @@ class MainWindow(qtw.QMainWindow):
         main_project_window = pjd.MainWindow(self)
         main_project_window.show()
         main_project_window.close_signal.connect(self.show)
-        self.grouping_menu.setEnabled(True)
+        self.group_text_menu.setEnabled(True)
         self.show_group_value_dialog.connect(main_project_window.showGroupValuesDialog)
 
     def save_drug_registry(self):
